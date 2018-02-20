@@ -7,9 +7,10 @@ script_path = os.path.dirname(os.path.realpath(__file__))
 def main():
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--dest', default=os.path.join(script_path, '.tmp'), help='Where to clone the temporary repository')
-	parser.add_argument('-r', dest='replacements', action='append', help='Replacement <find> <replace>. May be given multiple times', nargs=2)
+	parser.add_argument('-r', dest='replacements', action='append', help='Replacement <find> <replace>. May be given multiple times', nargs=2, required=True)
 
 	subparsers = parser.add_subparsers(dest='service')
+	subparsers.required = True
 
 	github_p = subparsers.add_parser('github', help='Gets repositories from GitHub')
 	github_p.add_argument('username', help='Your GitHub username')
@@ -33,7 +34,8 @@ def github(args):
 
 	for repo in repos:
 		print('>>> Processing {}'.format(repo['name']))
-		shutil.rmtree(args.dest)
+		try: shutil.rmtree(args.dest)
+		except: pass
 		subprocess.check_call(['git', 'clone', repo['ssh_url'], args.dest])
 		clean_git_repo(args.dest, args.replacements)
 		print()
@@ -61,7 +63,7 @@ def clean_git_repo(repoPath, replacements, remotesToUpdate=None, quiet=False):
 		remotesToUpdate = remotes
 	else:
 		remotesToUpdate = set(remotesToUpdate).intersection(remotes)
-	
+
 	for remote in remotes:
 		if quiet or input('Update remote "{0}"? [y/n] '.format(remote)) == 'y':
 			subprocess.check_call(['git', 'push', '-f', '--all', remote], cwd=repoPath)
@@ -69,5 +71,5 @@ def clean_git_repo(repoPath, replacements, remotesToUpdate=None, quiet=False):
 			print('Skipping...')
 	#endfor
 #enddef
-		
+
 if __name__ == '__main__': main()
