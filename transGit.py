@@ -55,7 +55,7 @@ def bitbucket(args):
 		print('>>> Processing {}'.format(repo['name']))
 		try: shutil.rmtree(args.dest)
 		except: pass
-		repo_link = repo['links']['clone'][1]['href']
+		repo_link = [x['href'] for x in repo['links']['clone'] if x['name'] == 'ssh'][0]
 		subprocess.check_call(['git', 'clone', repo_link, args.dest])
 		clean_git_repo(args.dest, args.replacements)
 		print()
