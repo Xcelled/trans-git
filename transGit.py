@@ -15,11 +15,15 @@ def main():
 	github_p = subparsers.add_parser('github', help='Gets repositories from GitHub')
 	github_p.add_argument('username', help='Your GitHub username')
 
+	bitbucket_p = subparsers.add_parser('bitbucket', help='Gets repositories from BitBucket')
+	bitbucket_p.add_argument('username', help='Your BitBucket username')
+
 	args = parser.parse_args()
 	args.replacements = dict(args.replacements)
 
 	services = {
-		'github': github
+		'github': github,
+		'bitbucket': bitbucket
 	}
 
 	return services[args.service](args)
@@ -39,6 +43,23 @@ def github(args):
 		subprocess.check_call(['git', 'clone', repo['ssh_url'], args.dest])
 		clean_git_repo(args.dest, args.replacements)
 		print()
+
+def bitbucket(args):
+	print('Downloading your repos... ', end='')
+	r = requests.get('https://api.bitbucket.org/2.0/repositories/{0}'.format(args.username))
+	r.raise_for_status()
+	repos = r.json()['values']
+	print('Found {}'.format(len(repos)))
+
+	for repo in repos:
+		print('>>> Processing {}'.format(repo['name']))
+		try: shutil.rmtree(args.dest)
+		except: pass
+		repo_link = [x['href'] for x in repo['links']['clone'] if x['name'] == 'ssh'][0]
+		subprocess.check_call(['git', 'clone', repo_link, args.dest])
+		clean_git_repo(args.dest, args.replacements)
+		print()
+
 
 def get_env_filter(replacements):
 	script = ''
