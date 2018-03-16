@@ -15,7 +15,7 @@ def main():
 	github_p = subparsers.add_parser('github', help='Gets repositories from GitHub')
 	github_p.add_argument('username', help='Your GitHub username')
 
-	bitbucket_p = subparsers.add_parser('bitbucket', help='Gets repositories from GitHub')
+	bitbucket_p = subparsers.add_parser('bitbucket', help='Gets repositories from BitBucket')
 	bitbucket_p.add_argument('username', help='Your BitBucket username')
 
 	args = parser.parse_args()
