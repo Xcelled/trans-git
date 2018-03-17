@@ -19,46 +19,54 @@ def main():
 	bitbucket_p.add_argument('username', help='Your BitBucket username')
 
 	args = parser.parse_args()
-	args.replacements = dict(args.replacements)
+	replacements = dict(args.replacements)
+	dest = args.dest
+	username = args.username
+	service = args.service
 
+	# These function return a list of dicts with values 'name' and 'ssh_url'
 	services = {
 		'github': github,
 		'bitbucket': bitbucket
 	}
 
-	return services[args.service](args)
+	print('Downloading your repos... ', end='')
+	repos = services[service](username)
+	return process_repos(repos, replacements, dest)
 #enddef
 
-def github(args):
-	print('Downloading your repos... ', end='')
-	r = requests.get('https://api.github.com/users/{0}/repos'.format(args.username))
+def process_repos(repos, replacements, dest):
+	print('Found {} repos'.format(len(repos)))
+
+	for repo in repos:
+		print('>>> Processing {}'.format(repo['name']))
+		try: shutil.rmtree(dest)
+		except: pass
+		subprocess.check_call(['git', 'clone', repo['ssh_url'], dest])
+		clean_git_repo(dest, replacements)
+		print()
+
+def github(username):
+	r = requests.get('https://api.github.com/users/{0}/repos'.format(username))
 	r.raise_for_status()
 	repos = r.json()
-	print('Found {}'.format(len(repos)))
+	return repos
 
-	for repo in repos:
-		print('>>> Processing {}'.format(repo['name']))
-		try: shutil.rmtree(args.dest)
-		except: pass
-		subprocess.check_call(['git', 'clone', repo['ssh_url'], args.dest])
-		clean_git_repo(args.dest, args.replacements)
-		print()
 
-def bitbucket(args):
-	print('Downloading your repos... ', end='')
-	r = requests.get('https://api.bitbucket.org/2.0/repositories/{0}'.format(args.username))
+def bitbucket(username):
+	r = requests.get('https://api.bitbucket.org/2.0/repositories/{0}'.format(username))
 	r.raise_for_status()
-	repos = r.json()['values']
-	print('Found {}'.format(len(repos)))
+	response = r.json()['values']
 
-	for repo in repos:
-		print('>>> Processing {}'.format(repo['name']))
-		try: shutil.rmtree(args.dest)
-		except: pass
+	repos = []
+	for repo in response:
+		repo_name = repo['name']
 		repo_link = [x['href'] for x in repo['links']['clone'] if x['name'] == 'ssh'][0]
-		subprocess.check_call(['git', 'clone', repo_link, args.dest])
-		clean_git_repo(args.dest, args.replacements)
-		print()
+		repos.append({
+			'name': repo_name,
+			'ssh_url': repo_link
+		})
+	return repos
 
 
 def get_env_filter(replacements):
